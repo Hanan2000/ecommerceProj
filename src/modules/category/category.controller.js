@@ -3,14 +3,21 @@ import slugify from 'slugify';
 import cloudinary from './../../utls/cloudinary.js';
 
 export const create =async(req,res)=>{
-    const name = req.body.name.toLowerCase();
+    
+  req.body.name = req.body.name.toLowerCase();
     if(await categoryModel.findOne({name:req.body.name})){
         return res.status(409).json({message:"category already exists"});
     }
+    req.body.slug= slugify(req.body.name);
     const{secure_url,public_id} = await cloudinary.uploader.upload(req.file.path,{
       folder:'tshop5/categories'  
     });
-    const category = await categoryModel.create({name,slug:slugify(name),image:{secure_url,public_id}});
+    req.body.image={secure_url,public_id};
+
+    req.body.createdBy= req.user._id;
+    req.body.updatedBy= req.user._id;
+    
+    const category = await categoryModel.create(req.body);
     return res.json({message:category});
 };
 
@@ -45,6 +52,7 @@ export const getActive = async(req,res)=>{
         category.image={secure_url,public_id};
     }
      category.status=req.body.status;
+     category.updatedBy=req.user._id;
      await category.save();
     return res.json({message:"success",category});
    };
